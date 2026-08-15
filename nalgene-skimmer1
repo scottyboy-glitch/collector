@@ -1,0 +1,41 @@
+export default {
+  async fetch(request, env, ctx) {
+    // Handle CORS Preflight Request
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        headers: {
+          "access-control-allow-origin": "*",
+          "access-control-allow-methods": "POST, GET, OPTIONS",
+          "access-control-allow-headers": "Content-Type, Authorization",
+          "access-control-max-age": "3600",
+        },
+      });
+    }
+
+    // Handle POST Request
+    if (request.method === "POST") {
+      try {
+        const data = await request.json();
+        // Log the data to your Worker logs or save it
+        console.log("Received Data:", data);
+        
+        return new Response(JSON.stringify({ status: "ok" }), {
+          headers: {
+            "content-type": "application/json",
+            "access-control-allow-origin": "*", // Allow your WP site to read the response
+          },
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+          status: 400,
+          headers: {
+            "content-type": "application/json",
+            "access-control-allow-origin": "*",
+          },
+        });
+      }
+    }
+
+    return new Response("Method Not Allowed", { status: 405 });
+  },
+};
